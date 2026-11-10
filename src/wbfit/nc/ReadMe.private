@@ -1,0 +1,75 @@
+WBFit 1.0 - NativeCall PRIVATE TEST BUILD
+=========================================
+
+THIS IS A PRIVATE TEST BUILD. Do not pass it on, upload it or put it in any
+archive: it contains code from the NativeCall SDK (ncsupport.c, and the
+module loader's conventions), which has no licence yet (all rights reserved
+by its author). The public build is the WBFit in Utilities.lha (no
+NativeCall).
+
+What it is
+----------
+
+The same WBFit (same arguments, same files, same prefs), built for the 68040
+with a NativeCall module (wbfit.narm, embedded) that runs its pixel and byte
+work as AArch64 code on the Raspberry Pi under Emu68:
+
+  hpass    resampling across (bicubic, widened when shrinking) (C)
+  vpass    resampling down, 16 bytes at a time (NEON)
+  fill     the FIT/CENTER background (C)
+  lut      old picture.datatype's palette/HAM pixels to RGB (C)
+  hist     the histogram for the median cut (C)
+  dither   nearest colour / Floyd-Steinberg to the palette (C)
+  pngfilt  the PNG row filters (best of five per row) (C)
+  deflate  the PNG's zlib stream: hash chains, dynamic/fixed/stored
+           blocks, resumable (C)
+  crc      the PNG chunk CRCs (C)
+  ilbm     chunky to bitplanes and ByteRun1 (C)
+
+Reading the picture (datatypes), the median cut itself, the file and the
+prefs stay on the 68k. Each native call stops after about 0.3 ms (the ARM
+counter) and is called again from where it stopped, so the 68k never waits
+more than about that; one ARM core.
+
+Every kernel gives the same bytes as the 68k code (tested under
+qemu-aarch64_be with the module itself, NEON included: random rows and
+weights for the passes, deflate on several kinds of data, and whole jobs of
+every mode and format compared stage by stage). All the arithmetic is
+integer, so native and 68k results are identical, not just close.
+
+It falls back to the 68k code when there is no nativecall.library, no
+NativeCall armstub, no 68040/68060, or a buffer native code can't see. If a
+native call ever fails, that stage is redone from its start with the 68k
+code and native calls stay off for the rest of the run (the output says
+so).
+
+Trying it
+---------
+
+  Copy WBFit C:WBFit-nc           (or anywhere; it is one file)
+
+  WBFit-nc Pics:photo.jpg BENCH
+  WBFit-nc Pics:photo.webp MODE=FIT BENCH
+  WBFit-nc Pics:photo.jpg FORMAT=ILBM DITHER BENCH
+
+BENCH fits the picture with the native kernels (and sets the backdrop as
+usual), then does the same work again with the 68k code (without writing),
+and prints a table: decode (through datatypes, not ours: the same both
+ways), scale, dither (palette ILBM only), encode (PNG filter + deflate +
+CRC, or ILBM), our stages together, and the total; for each the native and
+68k time, the gain, and whether the results are the same (a CRC of each
+stage's output). Then each kernel's native calls from the hypervisor's own
+clock: calls, total, average and longest call (every call should stay
+under about 1000 us; a "!" marks one that did not).
+
+  WBFit-nc Pics:photo.jpg TIMES   only the native run, a line per stage
+
+What to expect
+--------------
+
+On a 1920x1080 RTG Workbench from a large JPEG, the 68k code under Emu68
+spends most of its time in deflate and the two scaling passes. As native
+code those should be several times faster (deflate and the scaler perhaps
+3-8x, the NEON vertical pass more); the decode by the datatype is not ours
+and does not change. BENCH on your own machine is the real measure:
+please send its table.

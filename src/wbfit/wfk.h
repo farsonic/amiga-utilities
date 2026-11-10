@@ -158,8 +158,8 @@ struct WfkDither {
   wfk_ptr e0, e1;
   wfk_u32 pad;
 };
-WFK_CHECK_SIZE(struct WfkDither, 56)
-WFK_CHECK_OFFSET(struct WfkDither, e1, 48)
+WFK_CHECK_SIZE(struct WfkDither, 52)
+WFK_CHECK_OFFSET(struct WfkDither, e1, 44)
 
 /* ---- PNG filtering: rows [from, to) of in (bpp 3 RGB or 1 palette, w pixels, stride) to
    out + y * (1 + w * bpp): the filter type byte, then the row. adaptive: the filter with the
@@ -228,8 +228,10 @@ struct WfkIlbm {
 WFK_CHECK_SIZE(struct WfkIlbm, 48)
 WFK_CHECK_OFFSET(struct WfkIlbm, plane, 44)
 
-/* the kernels (in the NativeCall build NC_DECLARE in wfk_nc.h declares them) */
-#ifndef WFK_NC
+/* the kernels (in the NativeCall build NC_DECLARE: the prototypes and the kernel set) */
+#ifdef WFK_NC
+NC_DECLARE(wbfit, WFK_LIST)
+#else
 #define WFK__PROTO(n) wfk_u32 n(void *params);
 WFK_LIST(WFK__PROTO)
 #endif

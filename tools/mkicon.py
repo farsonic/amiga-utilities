@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Commodities - write classic Workbench icons (.info files, OS 2.x/3.x format).
+# Utilities - write classic Workbench icons (.info files, OS 2.x/3.x format).
 # From Lagoon's tools/mkicon.py, itself from Riptide's (same author,
-# GPL-2.0-only): the writer/reader are unchanged; images "ctf" and "sticky"
-# are new.
+# GPL-2.0-only): the writer/reader are unchanged; images "ctf", "sticky"
+# and (for Utilities) "wbfit" are new.
 #
 #   tools/mkicon.py project OUT.info [--tool T] [--tooltype S]... [--stack N] [--image install|doc|share]
 #   tools/mkicon.py tool    OUT.info [--tooltype S]... [--stack N] [--image prefs|install]
@@ -258,8 +258,30 @@ def image_noframes():
     return c
 
 
+def image_wbfit():
+    """WBFit: a monitor whose screen a picture (sky, sun, hills) fills to the edges, with
+    arrows pushing out to the corners."""
+    c = Canvas(36, 24)
+    c.rect(3, 1, 32, 18, GREY)
+    c.frame(3, 1, 32, 18, BLACK)             # the monitor
+    c.rect(5, 3, 30, 16, BLUE)               # the picture: blue sky to the edges
+    for y in range(11, 17):                  # hills
+        for x in range(5, 31):
+            if y >= 11 + int(2.5 + 2.5 * math.sin((x - 5) / 4.0)):
+                c.put(x, y, BLACK if (x + y) % 5 == 0 else GREY)
+    c.rect(22, 5, 25, 7, WHITE)              # the sun
+    c.put(21, 6, WHITE); c.put(26, 6, WHITE); c.put(23, 4, WHITE); c.put(24, 8, WHITE)
+    for (x, y, dx, dy) in ((6, 4, 1, 1), (29, 4, -1, 1), (6, 15, 1, -1), (29, 15, -1, -1)):
+        c.put(x, y, WHITE); c.put(x + dx, y, WHITE); c.put(x, y + dy, WHITE)
+        c.put(x + dx, y + dy, WHITE); c.put(x + 2 * dx, y + 2 * dy, WHITE)
+    c.rect(15, 19, 20, 20, BLACK)            # the stand
+    c.rect(11, 21, 24, 22, BLACK)
+    return c
+
+
 IMAGES = {"ctf": image_ctf, "sticky": image_sticky, "install": image_install, "doc": image_doc, "drawer": image_drawer,
-          "docs": lambda: image_drawer(True), "prefs": image_prefs, "share": image_share, "noframes": image_noframes}
+          "docs": lambda: image_drawer(True), "prefs": image_prefs, "share": image_share, "noframes": image_noframes,
+          "wbfit": image_wbfit}
 
 
 # ---------------------------------------------------------------- writer --

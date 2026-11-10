@@ -2,7 +2,7 @@
  * WBFit - the Workbench backdrop from any picture, scaled to the Workbench screen's exact size
  * and pixel shape, so Workbench never tiles or crops it.
  *
- *   WBFit FILE,MODE/K,BG/K,OUT/K,FORMAT/K,PALETTE/K,DITHER/S,RESTORE/S,WATCH/S,QUIET/S,TIMES/S,BENCH/S
+ *   WBFit FILE,MODE/K,BG/K,OUT/K,FORMAT/K,PALETTE/K,DITHER/S,RESTORE/S,WATCH/S,QUIET/S,TIMES/S,BENCH/S,V40/S
  *
  * The picture is read through datatypes.library (PDTM_READPIXELARRAY with picture.datatype 43+,
  * else the class's bitmap and colour registers), fitted (wfcore.c), written as PNG, 24-bit ILBM
@@ -85,7 +85,7 @@ enum { FMT_AUTO = -1 };
 enum { PAL_AUTO, PAL_WB, PAL_PICTURE };
 typedef struct {
   char file[512], out[512];
-  int mode, format, palette, dither, restore, watch, quiet, times, bench, bgset;
+  int mode, format, palette, dither, restore, watch, quiet, times, bench, bgset, v40;
   ULONG bg;
 } Opt;
 
@@ -283,6 +283,9 @@ static int get_screen(Scr *s)
       GetDisplayInfoData(NULL, (UBYTE *)&di, sizeof di, DTAG_DISP, s->modeid) >= offsetof(struct DisplayInfo, Resolution) + sizeof di.Resolution &&
       di.Resolution.x > 0 && di.Resolution.y > 0) {
     s->rx = (ULONG)di.Resolution.x; s->ry = (ULONG)di.Resolution.y;
+    /* within 5% of square (RTG modes often say 22:23 and the like): square. The Amiga's own
+       modes are far off it (PAL hires 22:44, NTSC hires 22:52, superhires 11:44) */
+    if (s->rx * 20 >= s->ry * 19 && s->ry * 20 >= s->rx * 19) s->rx = s->ry = 1;
   }
   if (s->depth >= 1 && s->depth <= 8) {
     ULONG i, n = 1UL << s->depth;
@@ -386,7 +389,16 @@ static int load_pic(const char *path, Pic *p, int v43)
   if (!o) {
     LONG e = IoErr();
     STRPTR s = e >= DTERROR_UNKNOWN_DATATYPE ? GetDTString((ULONG)e) : NULL;
-    if (s) return fail("%s: %s", path, s);
+    if (s) {                               /* (the system's strings may hold a %s for the name) */
+      char b[300];
+      const char *q = strstr((const char *)s, "%s");
+      if (q && strlen((const char *)s) + strlen(path) < sizeof b) {
+        memcpy(b, s, q - (const char *)s); b[q - (const char *)s] = 0;
+        strcat(b, path); strcat(b, q + 2);
+        return fail("%s", b);
+      }
+      return fail("%s: %s", path, s);
+    }
     if (e == ERROR_OBJECT_NOT_FOUND) return fail("%s: no such file", path);
     return fail("%s: no datatype can read it (is the datatype for this format installed?)", path);
   }
@@ -478,12 +490,12 @@ static int get_opts(Opt *o)
   memset(o, 0, sizeof *o);
   o->mode = WF_FILL; o->format = FMT_AUTO; o->palette = PAL_AUTO;
   if (!fromwb) {
-    enum { A_FILE, A_MODE, A_BG, A_OUT, A_FORMAT, A_PALETTE, A_DITHER, A_RESTORE, A_WATCH, A_QUIET, A_TIMES, A_BENCH, A_N };
+    enum { A_FILE, A_MODE, A_BG, A_OUT, A_FORMAT, A_PALETTE, A_DITHER, A_RESTORE, A_WATCH, A_QUIET, A_TIMES, A_BENCH, A_V40, A_N };
     LONG a[A_N];
     struct RDArgs *rd;
     int ok = 1;
     memset(a, 0, sizeof a);
-    if (!(rd = ReadArgs((STRPTR)"FILE,MODE/K,BG/K,OUT/K,FORMAT/K,PALETTE/K,DITHER/S,RESTORE/S,WATCH/S,QUIET/S,TIMES/S,BENCH/S", a, NULL))) {
+    if (!(rd = ReadArgs((STRPTR)"FILE,MODE/K,BG/K,OUT/K,FORMAT/K,PALETTE/K,DITHER/S,RESTORE/S,WATCH/S,QUIET/S,TIMES/S,BENCH/S,V40/S", a, NULL))) {
       PrintFault(IoErr(), (STRPTR)"WBFit");
       failed = 1;
       return 0;
@@ -492,7 +504,7 @@ static int get_opts(Opt *o)
     if (a[A_OUT]) strncpy(o->out, (char *)a[A_OUT], sizeof o->out - 1);
     ok = set_opts(o, (char *)a[A_MODE], (char *)a[A_BG], (char *)a[A_FORMAT], (char *)a[A_PALETTE]);
     o->dither = a[A_DITHER] != 0; o->restore = a[A_RESTORE] != 0; o->watch = a[A_WATCH] != 0;
-    o->quiet = a[A_QUIET] != 0; o->times = a[A_TIMES] != 0; o->bench = a[A_BENCH] != 0;
+    o->quiet = a[A_QUIET] != 0; o->times = a[A_TIMES] != 0; o->bench = a[A_BENCH] != 0; o->v40 = a[A_V40] != 0;
     FreeArgs(rd);
     return ok;
   }
@@ -512,7 +524,7 @@ static int get_opts(Opt *o)
     if (tt(d, "OUT")) strncpy(o->out, tt(d, "OUT"), sizeof o->out - 1);
     ok = set_opts(o, tt(d, "MODE"), tt(d, "BG"), tt(d, "FORMAT"), tt(d, "PALETTE"));
     o->dither = tt_yes(d, "DITHER"); o->restore = tt_yes(d, "RESTORE"); o->watch = tt_yes(d, "WATCH");
-    o->quiet = tt_yes(d, "QUIET"); o->times = tt_yes(d, "TIMES"); o->bench = tt_yes(d, "BENCH");
+    o->quiet = tt_yes(d, "QUIET"); o->times = tt_yes(d, "TIMES"); o->bench = tt_yes(d, "BENCH"); o->v40 = tt_yes(d, "V40");
     if (d) FreeDiskObject(d);
     return ok;
   }
@@ -573,13 +585,16 @@ static const char *const modename[] = { "FILL", "FIT", "STRETCH", "CENTER" };
 static const char *const fmtname[] = { "PNG (24-bit)", "ILBM (24-bit)", "ILBM" };
 static const char *const stname[WF_NST] = { "convert", "scale", "dither", "encode" };
 
-static int choose(const Opt *o, const Scr *s, int pdt, int *format, int *depth, int *usewb)
+/* truecolour: picture.datatype takes true-colour pixels (version 43+, or it gave us an RGB pixel
+   array: AROS's says 41 but can) */
+static int truecolour_seen;
+static int choose(const Opt *o, const Scr *s, int truecolour, int *format, int *depth, int *usewb)
 {
   int deep = s->depth > 8;
   *format = o->format;
-  if (*format == FMT_AUTO) *format = pdt >= 43 && deep ? (exists("DEVS:DataTypes/PNG") ? WF_PNG : WF_ILBM24) : WF_ILBM;
-  if (*format != WF_ILBM && pdt < 43)
-    INFO("  (picture.datatype %d can't read a 24-bit picture: Workbench may not show it)\n", pdt);
+  if (*format == FMT_AUTO) *format = truecolour && deep ? (exists("DEVS:DataTypes/PNG") ? WF_PNG : WF_ILBM24) : WF_ILBM;
+  if (*format != WF_ILBM && !truecolour)
+    INFO("  (this picture.datatype can't take a 24-bit picture: Workbench may not show it)\n");
   *depth = deep ? 8 : (int)s->depth;
   if (*depth < 1) *depth = 1;
   *usewb = o->palette == PAL_WB || (o->palette == PAL_AUTO && !deep);
@@ -686,7 +701,7 @@ static void bench(WfJob *j, wf_u32 dec, wf_u32 nat_total)
   ms(a, nat_total); ms(b, dec + tot68);
   say("  %-12s %12s %12s\n", "total", a, b);
   if (e) say("  (the 68k run failed: %s)\n", wf_errstr(e));
-  wfnc_report();
+  wfnc_report(say);
   wf_job_free(&run, &k);
   runner(1);
 }
@@ -701,10 +716,11 @@ static int fit(const Opt *o, Scr *s, int setprefs)
   wf_u32 t0 = now(), tdec, twrite = 0;
   char path[512], a[16];
   if (!get_screen(s)) return fail("the Workbench screen is not open");
-  choose(o, s, pdt, &format, &depth, &usewb);
-  if (!out_name(o, s, format, path, sizeof path)) return 0;
-  if (!load_pic(o->file, &p, pdt >= 43)) return 0;
+  if (!load_pic(o->file, &p, !o->v40)) return 0;   /* (V40: the old way only, for testing) */
   tdec = now() - t0;
+  truecolour_seen = pdt >= 43 || p.via == 1;
+  choose(o, s, truecolour_seen, &format, &depth, &usewb);
+  if (!out_name(o, s, format, path, sizeof path)) { pic_free(&p); return 0; }
   memset(&j, 0, sizeof j);
   if (p.rgb) { j.src = p.rgb; j.sstride = p.stride; }
   else { j.idx = p.idx; j.ipal = p.pal; j.ham = p.ham; j.sstride = p.stride; }
@@ -809,7 +825,7 @@ static void watch(const Opt *o, Scr *last)
       }
       if (tries < 30 && get_screen(&s) && !same_screen(&s, last)) {
         int k, hit = -1, format, depth, usewb;
-        choose(o, &s, pdt_version(), &format, &depth, &usewb);
+        choose(o, &s, truecolour_seen, &format, &depth, &usewb);
         for (k = 0; k < ncache; k++) if (same_screen(&cache[k].s, &s) && cache[k].format == format && exists(cache[k].path)) hit = k;
         failed = 0;
         if (hit >= 0) { int b; set_prefs(cache[hit].path, &b); }

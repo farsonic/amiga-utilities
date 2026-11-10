@@ -277,10 +277,16 @@ static wf_u32 mul(wf_u32 a, wf_u32 b) { u64 v = (u64)a * b; return v > 0x7FFFFFF
 static int st_convert(WfRun *r, WfJob *j, wf_u8 *rgb)
 {
   struct WfkLut p;
+  wf_u8 *pal = get(r, 768);              /* (the caller's palette may be memory native code can't see) */
+  int e;
+  if (!pal) return WF_ENOMEM;
+  memcpy(pal, j->ipal, 768);
   memset(&p, 0, sizeof p);
   p.in = WFK_SETP(j->idx); p.istride = j->sstride; p.w = j->sw;
-  p.out = WFK_SETP(rgb); p.pal = WFK_SETP(j->ipal); p.ham = j->ham;
-  return r->range(r, WFKI_wfk_lut, &p, 0, j->sh);
+  p.out = WFK_SETP(rgb); p.pal = WFK_SETP(pal); p.ham = j->ham;
+  e = r->range(r, WFKI_wfk_lut, &p, 0, j->sh);
+  put(r, pal, 768);
+  return e;
 }
 
 static int st_scale(WfRun *r, WfJob *j, const wf_u8 *src, wf_u32 sstride)

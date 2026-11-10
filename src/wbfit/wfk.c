@@ -14,7 +14,9 @@
 
 #if NC_NATIVE
 #include <stdint.h>
-#define CPY(d, s, n) __builtin_memcpy((d), (s), (n))
+/* (not memcpy: the SDK's is a byte loop behind a call; this one the loop vectorizer widens) */
+static void cpy(unsigned char *d, const unsigned char *s, size_t n) { while (n--) *d++ = *s++; }
+#define CPY(d, s, n) cpy((unsigned char *)(d), (const unsigned char *)(s), (n))
 #else
 #define CPY(d, s, n) memcpy((d), (s), (n))
 #endif
@@ -119,6 +121,11 @@ WFK_KERNEL(wfk_vpass)
     for (; x < nb; x++) {
       const u8 *q = in + x;
       s32 v = 0;
+#if NC_NATIVE
+      /* GCC 14.2 -O3 for big-endian AArch64 vectorizes this strided widening sum wrongly (found
+         by nc/tests: large weights gave 0); the row's bulk is NEON (WFK_VROW) anyway */
+#pragma GCC novector
+#endif
       for (j = 0; j < n; j++, q += p->istride) v += w[j] * *q;
       o[x] = q14(v);
     }

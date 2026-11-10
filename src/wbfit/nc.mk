@@ -15,7 +15,7 @@ $(error $(NC_SDK) is not the NativeCall SDK's sdk directory (no mk/nativecall.mk
 endif
 WBNC_B     := build/nc
 NC_PRIVATE ?= /tmp/claude-0/-home-user/3a066da9-8230-5cea-817a-b3782336c61e/scratchpad/wbfit-private
-WBNC_KSRC  := src/wbfit/nc/wfk_nc.c src/wbfit/wfk.c src/wbfit/wfk.h
+WBNC_KSRC  := src/wbfit/nc/wfk_nc.c src/wbfit/wfk.c src/wbfit/wfk.h src/lib/pxbase.h src/lib/pxneon.h
 WBNC_IMG   := $(WBNC_B)/mod/build/native/wbfit_image.c
 WBNC_NARM  := $(WBNC_B)/mod/build/native/wbfit.narm
 # -fno-tree-slp-vectorize: GCC 14.2's SLP vectorizer miscompiles some big-endian code (found by
@@ -27,11 +27,11 @@ $(WBNC_NARM) $(WBNC_IMG): $(WBNC_KSRC) src/wbfit/nc.mk
 	@mkdir -p $(WBNC_B)/mod
 	ln -sf $(abspath src/wbfit/nc/wfk_nc.c) $(WBNC_B)/mod/wfk_nc.c
 	$(MAKE) -B -C $(WBNC_B)/mod -f $(NC_SDK_ABS)/mk/nativecall.mk narm MODULE=wbfit KERNELS=wfk_nc.c \
-	  NC_SDK=$(NC_SDK_ABS) CFLAGS_NATIVE='$(WBNC_NATFLAGS) -I$(abspath src/wbfit) -I$(abspath src/wbfit/nc)'
+	  NC_SDK=$(NC_SDK_ABS) CFLAGS_NATIVE='$(WBNC_NATFLAGS) -I$(abspath src/wbfit) -I$(abspath src/lib) -I$(abspath src/wbfit/nc)'
 
 # ---- the 68k side (vbcc, 68040)
-WBNC_VC := $(VC) -c99 -O2 -cpu=68040 -dontwarn=153 -I$(NDK) -Isrc/wbfit -Isrc/wbfit/nc -I$(NC_SDK_ABS)/include -DWFK_NC -DWBFIT_NC
-WBNC_SRC := src/wbfit/wbfit.c src/wbfit/wfcore.c src/wbfit/wfprefs.c src/wbfit/nc/wfk_nc.c src/wbfit/nc/wfnc.c \
+WBNC_VC := $(VC) -c99 -O2 -cpu=68040 -dontwarn=153 -I$(NDK) -Isrc/wbfit -Isrc/lib -Isrc/wbfit/nc -I$(NC_SDK_ABS)/include -DWFK_NC -DWBFIT_NC
+WBNC_SRC := src/wbfit/wbfit.c src/wbfit/wfcore.c src/wbfit/wfprefs.c src/wbfit/nc/wfk_nc.c src/wbfit/nc/wfnc.c src/lib/pxweights.c src/lib/pxquant.c \
             $(NC_SDK_ABS)/lib68k/ncsupport.c $(WBNC_IMG)
 $(WBNC_B)/WBFit: $(WBFIT_SRC) $(WBFIT_HDR) src/wbfit/nc/wfnc.c src/wbfit/nc/wfnc.h $(WBNC_KSRC) $(WBNC_IMG)
 	@mkdir -p $(WBNC_B)
@@ -42,18 +42,20 @@ nc: $(WBNC_B)/WBFit
 # ---- the module under qemu-aarch64_be (Linux user mode, no libc): nc/tests/narm_run.c loads it as
 #      the hypervisor would and checks it against the kernels' plain C, then whole jobs
 WBNC_A64CC := aarch64-linux-gnu-gcc-14 -mbig-endian -mcpu=cortex-a72 -O2 -fno-tree-slp-vectorize -ffreestanding -nostdlib -static -fno-pie -no-pie \
-              -fno-stack-protector -fno-asynchronous-unwind-tables -Wall -Wextra -Wno-unused-function -Isrc/wbfit -Isrc/wbfit/nc \
+              -fno-stack-protector -fno-asynchronous-unwind-tables -Wall -Wextra -Wno-unused-function -Isrc/wbfit -Isrc/lib -Isrc/wbfit/nc \
               -I$(NC_SDK_ABS)/native/include -I$(NC_SDK_ABS)/include -DWFK_NC
 WBNC_Q := $(WBNC_B)/qemu
-$(WBNC_Q)/narm_run: src/wbfit/nc/tests/narm_run.c src/wbfit/nc/tests/narm_start.S $(WBNC_KSRC) src/wbfit/wfcore.c src/wbfit/wfcore.h $(WBNC_NARM)
+$(WBNC_Q)/narm_run: src/wbfit/nc/tests/narm_run.c src/wbfit/nc/tests/narm_start.S $(WBNC_KSRC) src/wbfit/wfcore.c src/wbfit/wfcore.h src/lib/pxweights.c src/lib/pxquant.c $(WBNC_NARM)
 	@mkdir -p $(WBNC_Q)
 	$(WBNC_A64CC) -c -o $(WBNC_Q)/ref.o -DWFK_NO_NEON -O1 -fno-tree-vectorize src/wbfit/nc/wfk_nc.c
 	$(WBNC_A64CC) -c -o $(WBNC_Q)/core.o -fno-tree-loop-distribute-patterns src/wbfit/wfcore.c
+	$(WBNC_A64CC) -c -o $(WBNC_Q)/pxw.o -fno-tree-loop-distribute-patterns src/lib/pxweights.c
+	$(WBNC_A64CC) -c -o $(WBNC_Q)/pxq.o -fno-tree-loop-distribute-patterns src/lib/pxquant.c
 	$(WBNC_A64CC) -c -o $(WBNC_Q)/rt.o -fno-tree-loop-distribute-patterns $(NC_SDK_ABS)/native/narm_rt.c
 	$(WBNC_A64CC) -c -o $(WBNC_Q)/run.o -fno-tree-loop-distribute-patterns src/wbfit/nc/tests/narm_run.c
 	$(WBNC_A64CC) -c -o $(WBNC_Q)/start.o -DNARM_FILE_S='"$(abspath $(WBNC_NARM))"' src/wbfit/nc/tests/narm_start.S
 	aarch64-linux-gnu-ld -EB -static -Ttext=0x400000 --no-warn-rwx-segments -o $@ $(WBNC_Q)/start.o $(WBNC_Q)/run.o \
-	  $(WBNC_Q)/core.o $(WBNC_Q)/ref.o $(WBNC_Q)/rt.o
+	  $(WBNC_Q)/core.o $(WBNC_Q)/pxw.o $(WBNC_Q)/pxq.o $(WBNC_Q)/ref.o $(WBNC_Q)/rt.o
 nctest: $(WBNC_Q)/narm_run
 	qemu-aarch64_be -cpu cortex-a72 $(WBNC_Q)/narm_run
 

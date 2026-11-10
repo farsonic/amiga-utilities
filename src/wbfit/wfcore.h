@@ -9,6 +9,8 @@
 #ifndef WFCORE_H
 #define WFCORE_H
 #include "wfk.h"
+#include "pxweights.h"
+#include "pxquant.h"
 
 typedef wfk_u8 wf_u8;
 typedef wfk_u32 wf_u32;
@@ -49,17 +51,8 @@ typedef struct {
 } WfPlace;
 int wf_place(WfPlace *pl, wf_u32 sw, wf_u32 sh, wf_u32 W, wf_u32 H, wf_u32 rx, wf_u32 ry, int mode);
 
-/* ---- resampling weights (bicubic, Catmull-Rom; widened by the factor when shrinking, so it
-   averages every source pixel: no aliasing), integer only. For scaled positions [v0, v0 + n)
-   of a src -> dst scale: tab[i] = { first source index, taps }, wts[i * k ...] Q14 weights
-   adding up to 1 << 14 exactly. k: wf_taps(). Returns 1 if this is the identity (each output
-   one source pixel). */
-wf_u32 wf_taps(wf_u32 src, wf_u32 dst);
-int wf_weights(wf_u32 src, wf_u32 dst, wf_u32 v0, wf_u32 n, wf_u32 *tab, wfk_s16 *wts, wf_u32 k);
-
-/* ---- quantiser: median cut of a wfk_hist histogram to at most ncol colours (pal: RGB);
-   returns the number of colours */
-int wf_mediancut(const wf_u32 *hist, int ncol, wf_u8 *pal);
+/* ---- the resampling weights (wf_taps, wf_weights) and the median cut (wf_mediancut):
+   src/lib/pxweights.h, pxquant.h */
 /* the picture's border, averaged (FIT's background when BG is not given) */
 wf_u32 wf_edge(const wf_u8 *src, wf_u32 w, wf_u32 h, wf_u32 stride);
 

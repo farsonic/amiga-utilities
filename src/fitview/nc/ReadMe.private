@@ -1,0 +1,65 @@
+FitView 1.0 - NativeCall PRIVATE TEST BUILD
+===========================================
+
+THIS IS A PRIVATE TEST BUILD. Do not pass it on, upload it or put it in any
+archive: it contains code from the NativeCall SDK (ncsupport.c, and the
+module loader's conventions), which has no licence yet (all rights reserved
+by its author). The public build is the FitView in Utilities.lha (no
+NativeCall).
+
+What it is
+----------
+
+The same FitView (same arguments, menus, keys and settings), built for the
+68040 with a NativeCall module (fitview.narm, embedded) that runs its pixel
+work as AArch64 code on the Raspberry Pi under Emu68:
+
+  hpass    the high-quality scale across (WBFit's bicubic, widened when
+           shrinking; four channels) (C)
+  vpass    the high-quality scale down, 16 bytes at a time (NEON)
+  nn       the fast preview while the window changes (nearest neighbour)
+  fill     the background around the picture
+  comp     pictures with alpha over the checkerboard
+  dither   the window's picture to the screen's pens (nearest colour or
+           Floyd-Steinberg), screens of 8 bits or fewer
+
+Reading the picture (datatypes, in FitView's loader process), the window,
+the menus and drawing to the screen (WritePixelArray, WriteChunkyPixels)
+stay on the 68k. Each native call stops after about 0.3 ms (the ARM
+counter) and is called again from where it stopped, and a row of a kernel
+is never more than about 32768 filter taps (wide rows are done in column
+chunks), so the window answers between calls; one ARM core.
+
+This is what makes live resizing smooth on a big RTG screen: the preview and
+the refined picture of a 1920x1080 window come from the ARM in a few
+milliseconds instead of seconds on the 68k.
+
+Every kernel gives the same bytes as the 68k code (tested under
+qemu-aarch64_be with the module itself, NEON included: random rows, taps,
+weights, palettes, alpha, pens, and whole windows of every zoom mode, 32-bit
+and palette pictures, at the sizes of real use, compared byte for byte). All
+the arithmetic is integer, so native and 68k results are identical, not
+just close.
+
+It falls back to the 68k code when there is no nativecall.library, no
+NativeCall armstub, no 68040/68060, or a buffer native code can't see. If a
+native call ever fails (NC_ST_FAULT or a wrong range), that band is drawn
+again with the 68k code and native calls stay off for the rest of the run.
+
+Trying it
+---------
+
+  Copy FitView C:FitView-nc       (or anywhere; it is one file)
+
+  FitView-nc Pics:photo.jpg BENCH
+  FitView-nc Docs:manual.pdf
+
+BENCH draws the window's picture once the first view is refined, then
+again with the 68k code, and prints (in the Shell; from Workbench in a
+requester) the preview and the refined scale, native against 68k, with
+whether the pixels are the same, and each kernel's native calls (the
+hypervisor's times: calls, total, average and longest call; "!" marks a
+call over 1 ms). The Settings menu's "Benchmark" does the same at any time.
+
+The About requester (Help key, or Project/About) says whether the kernels
+run natively and, if not, why.

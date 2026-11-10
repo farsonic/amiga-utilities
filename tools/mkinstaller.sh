@@ -5,12 +5,16 @@
 # there (its .datatype files, its descriptors and their icons, an optional <X>Info tool, PDF's
 # Fonts drawer), so a datatype that was not bundled is not offered.
 #
+# FitView (when it is one of the tools) can also go to SYS:Utilities, and, only if the user says
+# so, in place of SYS:Utilities/MultiView (kept as MultiView.orig first): tools/fitview-viewer.inst.
+#
 # The script keeps to what Commodore's Installer 43, InstallerLG and the AROS Installer all do
 # the same way (found with Install-Commodities on AROS): no procedure, no select for values
 # (plain ifs), no (and ...) (nested ifs), askoptions bits tested with (IN mask n), one action
 # per if.
 # SPDX-License-Identifier: GPL-2.0-only
 set -e
+top=$(cd "$(dirname "$0")/.." && pwd)
 pkg=$1; shift
 out=$pkg/Install-Utilities
 q() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }   # an Installer string's inside
@@ -84,6 +88,7 @@ printf '    (choices'
 for t in "$@"; do
 	case $t in
 	WBFit) printf ' "WBFit (backdrop from any picture)"' ;;
+	FitView) printf ' "FitView (MultiView replacement, pictures fit the window)"' ;;
 	*) printf ' "%s"' "$(q "$t")" ;;
 	esac
 done
@@ -106,7 +111,7 @@ if [ $ntools -gt 0 ]; then
     (askchoice
       (prompt "Where should the tools go?")
       (help (cat "C: : Shell commands everywhere (their icons are not copied there).\n\n"
-                 "SYS:Tools: a drawer of the Workbench; double-click or drop a picture on WBFit's icon.\n\n"
+                 "SYS:Tools: a drawer of the Workbench; double-click or drop a picture on WBFit's or FitView's icon.\n\n"
                  "Another drawer: one of your choice.\n\n"
                  @askchoice-help))
       (choices "C:" "SYS:Tools" "Another drawer...")
@@ -127,6 +132,12 @@ EOF
 		echo "  (if (= #where 0)"
 		echo "    (copyfiles (prompt \"Copying $(q "$t") to \" #dest) (help @copyfiles-help) (source \"$(q "$t")\") (dest #dest))"
 		echo "    (copyfiles (prompt \"Copying $(q "$t") to \" #dest) (help @copyfiles-help) (source \"$(q "$t")\") (dest #dest) (infos))))"
+		bit=$((bit + 1))
+	done
+	# ---- FitView as the viewer: SYS:Utilities/FitView, and (only if chosen) in place of MultiView
+	bit=0
+	for t in "$@"; do
+		[ "$t" = FitView ] && sed "s/@BIT@/$bit/" "$top/tools/fitview-viewer.inst"
 		bit=$((bit + 1))
 	done
 fi

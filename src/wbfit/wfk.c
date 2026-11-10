@@ -10,10 +10,10 @@
  * Copyright (C) 2026 the WBFit author.
  * SPDX-License-Identifier: GPL-2.0-only
  */
+#define PX_KERNEL_FILE
 #include "wfk.h"
 
 #if NC_NATIVE
-#include <stdint.h>
 /* (not memcpy: the SDK's is a byte loop behind a call; this one the loop vectorizer widens) */
 static void cpy(unsigned char *d, const unsigned char *s, size_t n) { while (n--) *d++ = *s++; }
 #define CPY(d, s, n) cpy((unsigned char *)(d), (const unsigned char *)(s), (n))
@@ -21,47 +21,14 @@ static void cpy(unsigned char *d, const unsigned char *s, size_t n) { while (n--
 #define CPY(d, s, n) memcpy((d), (s), (n))
 #endif
 
-/* ================================================================== the clock
-   Natively a kernel stops after about WFK_BUDGET_US (the ARM counter); with WFK_TEST_BUDGET
-   (host tests) after a count of checks, so the stops come at many places; else never. */
-#define WFK_BUDGET_US 300
-#if NC_NATIVE
-typedef struct { uint64_t end; } Clk;
-static inline uint64_t cnt(void) { uint64_t v; __asm__ __volatile__("isb\n mrs %0, CNTVCT_EL0" : "=r"(v)); return v; }
-static void clk_start(Clk *c)
-{
-  uint64_t f;
-  __asm__ __volatile__("mrs %0, CNTFRQ_EL0" : "=r"(f));
-  if (!f || f > 1000000000ULL) f = 54000000ULL;     /* (a Pi 4's, if unset) */
-  c->end = cnt() + f / 1000000ULL * WFK_BUDGET_US;
-}
-static int clk_over(Clk *c) { return cnt() >= c->end; }
-#elif defined(WFK_TEST_BUDGET)
-unsigned long wfk_test_budget;
-typedef struct { unsigned long n; } Clk;
-static void clk_start(Clk *c) { c->n = 0; }
-static int clk_over(Clk *c) { return wfk_test_budget && ++c->n >= wfk_test_budget; }
-#else
-typedef int Clk;
-static void clk_start(Clk *c) { *c = 0; }
-#define clk_over(c) 0
-#endif
-/* at the top of a loop over units: stop before unit u (never before the first) */
-#define CLK_STOP(c, p, u) do { if ((u) > (p)->range.from && clk_over(c)) { (p)->range.to = (u); return 0; } } while (0)
+/* the clock (CLK_STOP), q14(), px_nearest(): src/lib/pxbase.h */
+WFK_DEFINE_BUDGET
 
 typedef wfk_u8 u8;
 typedef wfk_u16 u16;
 typedef wfk_s16 s16;
 typedef wfk_u32 u32;
 typedef wfk_s32 s32;
-
-/* a Q14 sum to a byte: clamp(floor((v + 8192) / 16384), 0, 255) */
-static u8 q14(s32 v)
-{
-  if (v <= 0) return 0;
-  v = (v + (1 << (WFK_WBITS - 1))) >> WFK_WBITS;
-  return (u8)(v > 255 ? 255 : v);
-}
 
 /* ================================================================== resampling */
 WFK_KERNEL(wfk_hpass)
@@ -196,27 +163,10 @@ WFK_KERNEL(wfk_hist)
   return 0;
 }
 
-/* the palette colour nearest a 5-bit bucket's centre (weighted 3:4:2), remembered */
-static u32 nearest(const struct WfkDither *p, u32 key)
-{
-  u16 *cache = WFK_P(u16, p->cache);
-  const u8 *pal = WFK_P(const u8, p->pal);
-  s32 r, g, b, bd = 0x7FFFFFFFL;
-  u32 i, best = 0;
-  if (cache[key] != 0xFFFF) return cache[key];
-  r = (s32)(((key >> 10) & 31) << 3 | 4); g = (s32)(((key >> 5) & 31) << 3 | 4); b = (s32)((key & 31) << 3 | 4);
-  for (i = 0; i < p->npal; i++) {
-    const u8 *q = pal + i * 3;
-    s32 dr = q[0] - r, dg = q[1] - g, db = q[2] - b, dd = dr * dr * 3 + dg * dg * 4 + db * db * 2;
-    if (dd < bd) { bd = dd; best = i; }
-  }
-  cache[key] = (u16)best;
-  return best;
-}
-#define KEY(r, g, b) (((u32)((r) >> 3) << 10) | ((u32)((g) >> 3) << 5) | (u32)((b) >> 3))
-static int clampi(s32 v) { return v < 0 ? 0 : v > 255 ? 255 : (int)v; }
-/* an error sixteenth, rounded half away from zero (the same on every compiler) */
-static s32 e16(s32 e) { return e >= 0 ? (e + 8) >> 4 : -((-e + 8) >> 4); }
+static u32 nearest(const struct WfkDither *p, u32 key) { return px_nearest(WFK_P(u16, p->cache), WFK_P(const u8, p->pal), p->npal, key); }
+#define KEY PX_KEY
+#define clampi px_clampi
+#define e16 px_e16
 
 WFK_KERNEL(wfk_dither)
 {

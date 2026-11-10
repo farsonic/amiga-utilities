@@ -2,7 +2,7 @@
 # Utilities - write classic Workbench icons (.info files, OS 2.x/3.x format).
 # From Lagoon's tools/mkicon.py, itself from Riptide's (same author,
 # GPL-2.0-only): the writer/reader are unchanged; images "ctf", "sticky"
-# and (for Utilities) "wbfit" are new.
+# and (for Utilities) "wbfit" and "fitview" are new.
 #
 #   tools/mkicon.py project OUT.info [--tool T] [--tooltype S]... [--stack N] [--image install|doc|share]
 #   tools/mkicon.py tool    OUT.info [--tooltype S]... [--stack N] [--image prefs|install]
@@ -279,9 +279,33 @@ def image_wbfit():
     return c
 
 
+def image_fitview():
+    """FitView: a window (title bar, size gadget) with a picture (sky, sun, hills) filling its
+    inside, and arrows pushing out to the corners: the picture fits the window."""
+    c = Canvas(36, 24)
+    c.rect(2, 1, 33, 22, GREY)
+    c.frame(2, 1, 33, 22, BLACK)             # the window
+    c.rect(3, 2, 32, 4, BLUE)                # its title bar
+    c.rect(4, 3, 9, 3, WHITE)
+    c.frame(30, 2, 32, 4, BLACK)
+    c.rect(4, 6, 31, 20, BLUE)               # the picture, to the edges
+    for y in range(13, 21):                  # hills
+        for x in range(4, 32):
+            if y >= 13 + int(2.5 + 2.5 * math.sin((x - 4) / 4.0)):
+                c.put(x, y, BLACK if (x + y) % 5 == 0 else GREY)
+    c.rect(22, 8, 25, 10, WHITE)             # the sun
+    c.put(21, 9, WHITE); c.put(26, 9, WHITE); c.put(23, 7, WHITE); c.put(24, 11, WHITE)
+    for (x, y, dx, dy) in ((5, 7, 1, 1), (30, 7, -1, 1), (5, 19, 1, -1), (30, 19, -1, -1)):
+        c.put(x, y, WHITE); c.put(x + dx, y, WHITE); c.put(x, y + dy, WHITE)
+        c.put(x + dx, y + dy, WHITE); c.put(x + 2 * dx, y + 2 * dy, WHITE)
+    c.rect(30, 19, 32, 21, GREY)             # the size gadget
+    c.frame(30, 19, 32, 21, BLACK)
+    return c
+
+
 IMAGES = {"ctf": image_ctf, "sticky": image_sticky, "install": image_install, "doc": image_doc, "drawer": image_drawer,
           "docs": lambda: image_drawer(True), "prefs": image_prefs, "share": image_share, "noframes": image_noframes,
-          "wbfit": image_wbfit}
+          "wbfit": image_wbfit, "fitview": image_fitview}
 
 
 # ---------------------------------------------------------------- writer --

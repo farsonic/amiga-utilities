@@ -4,9 +4,9 @@
 # The NativeCall test build: make nc|nctest|ncpriv NATIVECALL=1 NC_SDK=<sdk> (src/wbfit/nc.mk).
 TOOLS += WBFit
 TESTS += test-wbfit
-WBFIT_SRC := src/wbfit/wbfit.c src/wbfit/wfcore.c src/wbfit/wfk.c src/wbfit/wfprefs.c
-WBFIT_HDR := src/wbfit/wfcore.h src/wbfit/wfk.h src/wbfit/wfprefs.h
-WBFIT_VCFLAGS := -c99 -O2 -cpu=68000 -dontwarn=153 -I$(NDK) -Isrc/wbfit
+WBFIT_SRC := src/wbfit/wbfit.c src/wbfit/wfcore.c src/wbfit/wfk.c src/wbfit/wfprefs.c src/lib/pxweights.c src/lib/pxquant.c
+WBFIT_HDR := src/wbfit/wfcore.h src/wbfit/wfk.h src/wbfit/wfprefs.h src/lib/pxbase.h src/lib/pxweights.h src/lib/pxquant.h
+WBFIT_VCFLAGS := -c99 -O2 -cpu=68000 -dontwarn=153 -I$(NDK) -Isrc/wbfit -Isrc/lib
 
 build/WBFit: $(WBFIT_SRC) $(WBFIT_HDR) src/wbfit/tool.mk
 	@mkdir -p build
@@ -15,8 +15,8 @@ build/WBFit: $(WBFIT_SRC) $(WBFIT_HDR) src/wbfit/tool.mk
 
 # ---- host tests
 WBFIT_HOSTCC := gcc -std=c99 -g -O1 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-                -fno-omit-frame-pointer -Isrc/wbfit -DWFK_TEST_BUDGET
-WBFIT_HOSTSRC := src/wbfit/wfcore.c src/wbfit/wfk.c src/wbfit/wfprefs.c
+                -fno-omit-frame-pointer -Isrc/wbfit -Isrc/lib -DWFK_TEST_BUDGET
+WBFIT_HOSTSRC := src/wbfit/wfcore.c src/wbfit/wfk.c src/wbfit/wfprefs.c src/lib/pxweights.c src/lib/pxquant.c
 build/host/wbfit_test: tests/wbfit/wbfit_test.c $(WBFIT_HOSTSRC) $(WBFIT_HDR)
 	@mkdir -p $(dir $@)
 	$(WBFIT_HOSTCC) -o $@ tests/wbfit/wbfit_test.c $(WBFIT_HOSTSRC)

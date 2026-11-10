@@ -13,10 +13,8 @@
  *   wfk_ilbm     ILBM BODY rows: chunky (indices, or 24-bit RGB) to bitplanes, ByteRun1 packed
  *
  * One source (wfk.c) is the plain 68k program's code, the host tests' code and, with WFK_NC,
- * the NativeCall kernels (AArch64 on an Emu68 Pi; nc/). The parameter blocks are shared with
- * native code there: every field 4 bytes (pointers as NC_U32 read with WFK_P), layouts pinned
- * with NC_CHECK_SIZE/OFFSET. In the plain build pointers are pointers and nothing here needs
- * the NativeCall SDK.
+ * the NativeCall kernels (AArch64 on an Emu68 Pi; nc/). The conventions (4-byte parameter
+ * fields, WFK_P, the clock) are src/lib/pxbase.h's, shared with FitView's kernels.
  *
  * Natively a range kernel stops after about 0.3 ms of work (the ARM counter) at the end of a
  * unit (a row, or 4 KB for wfk_crc) and sets range.to to where it stopped; the caller calls again
@@ -28,42 +26,7 @@
 #ifndef WFK_H
 #define WFK_H
 
-#ifdef WFK_NC
-#include <nativecall/kernel.h>
-typedef NC_U32 wfk_u32;
-typedef NC_S32 wfk_s32;
-typedef NC_U16 wfk_u16;
-typedef NC_S16 wfk_s16;
-typedef NC_U8 wfk_u8;
-typedef NC_U32 wfk_ptr;
-#define WFK_P(type, f)   NC_PTR(type, f)
-#define WFK_SETP(x)      ((NC_U32)(NC_UPTR)(x))
-#define WFK_KERNEL(name) NC_KERNEL(name)
-#define WFK_RANGE        struct NCRange range
-#define WFK_RANGE_T      struct NCRange
-#define WFK_CHECK_SIZE(t, n)      NC_CHECK_SIZE(t, n)
-#define WFK_CHECK_OFFSET(t, f, n) NC_CHECK_OFFSET(t, f, n)
-#else
-#include <stddef.h>
-#include <string.h>
-typedef unsigned int wfk_u32;            /* 32 bits on the host and on the 68k (vbcc) */
-typedef int wfk_s32;
-typedef unsigned short wfk_u16;
-typedef short wfk_s16;
-typedef unsigned char wfk_u8;
-typedef void *wfk_ptr;
-struct WfkRange { wfk_u32 from, to; };
-#define WFK_P(type, f)   ((type *)(f))
-#define WFK_SETP(x)      ((void *)(x))
-#define WFK_KERNEL(name) wfk_u32 name(void *params)
-#define WFK_RANGE        struct WfkRange range
-#define WFK_RANGE_T      struct WfkRange
-#define WFK_CHECK_SIZE(t, n)
-#define WFK_CHECK_OFFSET(t, f, n)
-#ifndef NC_NATIVE
-#define NC_NATIVE 0
-#endif
-#endif
+#include "pxbase.h"                      /* the types, WFK_P, WFK_KERNEL, ... (src/lib) */
 
 #define WFK_LIST(K) \
   K(wfk_hpass)   \
@@ -79,9 +42,6 @@ struct WfkRange { wfk_u32 from, to; };
 
 #define WFK__ENUM(n) WFKI_##n,
 enum { WFK_LIST(WFK__ENUM) WFK_COUNT };
-
-/* weights are Q14: the taps of one output pixel add up to exactly 1 << WFK_WBITS */
-#define WFK_WBITS 14
 
 /* ---- resampling. tab: wfk_u32 [n][2] (first source index, taps), wts: wfk_s16 [n][k].
    hpass: source rows [from, to) (absolute), each from src + y * sstride (RGB, 3 bytes a pixel),
@@ -238,9 +198,5 @@ WFK_LIST(WFK__PROTO)
 void wfk_crc_table(wfk_u32 *tab);
 /* the deflate output size that always suffices for n bytes of input */
 #define WFK_DEFLATE_BOUND(n) ((n) + (n) / 4096 * 8 + 1024)
-
-#ifdef WFK_TEST_BUDGET
-extern unsigned long wfk_test_budget;    /* host tests: stop after this many clock checks (0 never) */
-#endif
 
 #endif

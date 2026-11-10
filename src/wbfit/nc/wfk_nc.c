@@ -2,10 +2,9 @@
  * wfk_nc.c - WBFit's kernels as a NativeCall module (NativeCall test build only: built with
  * NATIVECALL=1 and the NativeCall SDK, see src/wbfit/nc.mk; nothing of the SDK is in this
  * repository). The same source as the plain program's 68k code (../wfk.c, compiled here with
- * 4-byte pointer fields), plus NEON for the vertical resampling pass, 16 bytes at a time (the
- * integer arithmetic of the C exactly: products and sums in 32 bits, then max(0), +8192, >>14,
- * saturated to a byte). The 68k side of the NativeCall build compiles this file too: there it
- * is the plain C, the fallback.
+ * 4-byte pointer fields), plus NEON for the vertical resampling pass, 16 bytes at a time
+ * (src/lib/pxneon.h, shared with FitView: the integer arithmetic of the C exactly). The 68k
+ * side of the NativeCall build compiles this file too: there it is the plain C, the fallback.
  *
  * Copyright (C) 2026 the WBFit author.
  * SPDX-License-Identifier: GPL-2.0-only
@@ -13,45 +12,11 @@
 #ifndef WFK_NC
 #define WFK_NC
 #endif
+#define PX_KERNEL_FILE
 #include "wfk.h"
 
-#if NC_NATIVE && !defined(WFK_NO_NEON)
-#include <arm_neon.h>
-static wfk_u32 vrow_neon(const wfk_u8 *in, wfk_u32 istride, wfk_u32 n, const wfk_s16 *w, wfk_u8 *o, wfk_u32 nb);
-#define WFK_VROW vrow_neon
-#endif
+#include "pxneon.h"                      /* (src/lib: vrow_neon, WFK_VROW) */
 
 #include "wfk.c"
-
-#if NC_NATIVE && !defined(WFK_NO_NEON)
-static inline int32x4_t fin(int32x4_t a)
-{
-  return vshrq_n_s32(vaddq_s32(vmaxq_s32(a, vdupq_n_s32(0)), vdupq_n_s32(1 << (WFK_WBITS - 1))), WFK_WBITS);
-}
-/* bytes [0, x) of an output row, x a multiple of 16 (the rest is the C's) */
-static wfk_u32 vrow_neon(const wfk_u8 *in, wfk_u32 istride, wfk_u32 n, const wfk_s16 *w, wfk_u8 *o, wfk_u32 nb)
-{
-  wfk_u32 x, j;
-  for (x = 0; x + 16 <= nb; x += 16) {
-    int32x4_t a0 = vdupq_n_s32(0), a1 = a0, a2 = a0, a3 = a0;
-    const wfk_u8 *q = in + x;
-    for (j = 0; j < n; j++, q += istride) {
-      uint8x16_t v = vld1q_u8(q);
-      int16x8_t lo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(v))), hi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(v)));
-      int16_t c = w[j];
-      a0 = vmlal_n_s16(a0, vget_low_s16(lo), c);
-      a1 = vmlal_n_s16(a1, vget_high_s16(lo), c);
-      a2 = vmlal_n_s16(a2, vget_low_s16(hi), c);
-      a3 = vmlal_n_s16(a3, vget_high_s16(hi), c);
-    }
-    {
-      uint16x8_t l = vcombine_u16(vqmovun_s32(fin(a0)), vqmovun_s32(fin(a1)));
-      uint16x8_t h = vcombine_u16(vqmovun_s32(fin(a2)), vqmovun_s32(fin(a3)));
-      vst1q_u8(o + x, vcombine_u8(vqmovn_u16(l), vqmovn_u16(h)));
-    }
-  }
-  return x;
-}
-#endif
 
 NC_MODULE(wbfit, WFK_LIST)

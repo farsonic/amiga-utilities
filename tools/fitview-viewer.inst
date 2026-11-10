@@ -1,0 +1,34 @@
+; ---- FitView as the viewer (tools/fitview-viewer.inst, @BIT@: FitView's bit in #which)
+(set #fvsys 0)
+(set #fvmv 0)
+(if (IN #which @BIT@)
+  (set #fvsys
+    (askbool
+      (prompt "Also install FitView as SYS:Utilities/FitView, next to MultiView?")
+      (help (cat "FitView takes MultiView's arguments (FILE, PUBSCREEN, CLIPBOARD, ...), so it can be "
+                 "any icon's default tool: in an icon's Information window, set the Default Tool to "
+                 "SYS:Utilities/FitView. For every picture at once, set it in the default icons "
+                 "(ENVARC:Sys/def_picture.info and the like, used by DefIcons). The next question "
+                 "offers to put it in place of MultiView itself.\n\n" @askbool-help))
+      (default 0))))
+(if #fvsys
+  (copyfiles (prompt "Copying FitView to SYS:Utilities") (help @copyfiles-help) (source "FitView") (dest "SYS:Utilities") (infos)))
+(if #fvsys
+  (set #fvmv
+    (askbool
+      (prompt (cat "Use FitView in place of MultiView?\n\n"
+                   "SYS:Utilities/MultiView is kept as SYS:Utilities/MultiView.orig, and FitView is put "
+                   "in its place: every icon whose default tool is MultiView then opens in FitView. "
+                   "To undo it, copy MultiView.orig back to MultiView."))
+      (help (cat "Leave this at No to keep MultiView as it is: FitView is still in SYS:Utilities "
+                 "and wherever you put the tools.\n\n" @askbool-help))
+      (choices "Yes, in place of MultiView" "No, keep MultiView")
+      (default 0))))
+(if #fvmv
+  (if (exists "SYS:Utilities/MultiView" (noreq))
+    (if (not (exists "SYS:Utilities/MultiView.orig" (noreq)))
+      (copyfiles (prompt "Keeping MultiView as SYS:Utilities/MultiView.orig") (help @copyfiles-help)
+        (source "SYS:Utilities/MultiView") (dest "SYS:Utilities") (newname "MultiView.orig")))))
+(if #fvmv
+  (copyfiles (prompt "Putting FitView in place of SYS:Utilities/MultiView") (help @copyfiles-help)
+    (source "FitView") (dest "SYS:Utilities") (newname "MultiView")))

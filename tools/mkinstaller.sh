@@ -55,8 +55,7 @@ bit=0; val=1
 for t in "$@"; do echo "(set #def (+ #def $val))   ; $t"; bit=$((bit + 1)); val=$((val * 2)); done
 for n in $dts; do
 	case $n in
-	AVIF) echo "(if #v43 (if #c40 (set #def (+ #def $val))))   ; $n" ;;
-	PDF) echo "(if #c40 (set #def (+ #def $val)))   ; $n" ;;
+	AVIF|PDF) echo "(if #v43 (if #c40 (set #def (+ #def $val))))   ; $n" ;;
 	*) echo "(if #v43 (set #def (+ #def $val)))   ; $n" ;;
 	esac
 	val=$((val * 2))
@@ -67,19 +66,19 @@ for n in $dts; do
 	WebP) l="WebP (webp.datatype)"; v="#v43"; need="needs OS 3.5+" ;;
 	PNG-JPEG) l="PNG + JPEG (png/jpeg.datatype)"; v="#v43"; need="needs OS 3.5+" ;;
 	AVIF) l="AVIF (avif.datatype)"; v="#c40"; need="needs a 68040+" ;;
-	PDF) l="PDF (pdf.datatype)"; v="#c40"; need="needs a 68040+" ;;
+	PDF) l="PDF (pdf.datatype)"; v="#c40"; need="needs a 68040+ with FPU" ;;
 	esac
 	echo "(set #l$(echo $n | tr -d -) \"$(q "$l")\")"
 	echo "(if (= $v 0) (set #l$(echo $n | tr -d -) \"$(q "$l") ($need)\"))"
-	[ $n = AVIF ] && echo "(if (= #v43 0) (set #lAVIF \"$(q "$l") (needs OS 3.5+)\"))"
+	case $n in AVIF|PDF) echo "(if (= #v43 0) (set #l$n \"$(q "$l") (needs OS 3.5+)\"))" ;; esac
 done
 echo
 echo "(set #which"
 echo "  (askoptions"
 echo "    (prompt \"What do you want to install?\")"
 printf '    (help (cat "The tools go to a drawer you choose next. Each datatype goes to SYS:Classes/DataTypes, its descriptor to DEVS:DataTypes.\\n\\n"\n'
-printf '%s\n' '               "OS 3.5+ means picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4, 3.2, or P96/CGX on 3.1): WebP, PNG, JPEG and AVIF need it; yours is version " #pdt ".\n\n"'
-printf '%s\n' '               "AVIF and PDF are heavy work: they need a 68040 or 68060 to be usable; this CPU is a " #cpu ".\n\n"'
+printf '%s\n' '               "OS 3.5+ means picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4, 3.2, or P96/CGX on 3.1): every datatype here needs it; yours is version " #pdt ".\n\n"'
+printf '%s\n' '               "AVIF and PDF are heavy work: they need a 68040 or 68060 (PDF one with its FPU); this CPU is a " #cpu ".\n\n"'
 echo "               @askoptions-help))"
 printf '    (choices'
 for t in "$@"; do
@@ -164,6 +163,7 @@ for n in $dts; do
 	# pdf.datatype's fonts: SYS:Classes/DataTypes/PDF/Fonts (its dt_lib.h, PDFDT_FONTDIR)
 	fonts=$(cd "$pkg/$d" && find . -type d -name Fonts ! -path './Source/*' 2>/dev/null | head -1 | sed 's|^\./||')
 	if [ -n "$fonts" ]; then
+		echo "(if (IN #which $bit) (if (not (exists \"SYS:Classes/DataTypes/PDF\" (noreq))) (makedir \"SYS:Classes/DataTypes/PDF\" (infos))))"
 		echo "(if (IN #which $bit) (if (not (exists \"SYS:Classes/DataTypes/PDF/Fonts\" (noreq))) (makedir \"SYS:Classes/DataTypes/PDF/Fonts\")))"
 		echo "(if (IN #which $bit)"
 		echo "  (copyfiles"

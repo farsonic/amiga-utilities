@@ -8,7 +8,7 @@ an Installer script (`Install-Utilities`) that installs whichever of them you ch
 | Tool | What it does | Needs |
 |---|---|---|
 | WBFit | sets the Workbench backdrop from any picture, scaled to the screen's exact resolution (and pixel aspect) | OS 3.0/3.1+, any 68000; PNG/24-bit backdrops need picture.datatype 43 |
-| DataTypes/ | our datatypes, each its own unchanged public package: WebP, PNG + JPEG, AVIF (and PDF once it is built) | picture.datatype 43 (OS 3.5+); AVIF and PDF a 68040/060 |
+| DataTypes/ | our datatypes, each its own unchanged public package: WebP, PNG + JPEG, AVIF, PDF (each one included when its package has been built) | picture.datatype 43 (OS 3.5+); AVIF and PDF a 68040/060 (PDF with FPU) |
 
 Private NativeCall builds of tools that have one are never part of this archive (the NativeCall
 SDK has no licence yet); they are built separately with `NATIVECALL=1 NC_SDK=...`. The packaging

@@ -107,9 +107,11 @@ AVIF      avif.datatype: AVIF pictures (AV1 in HEIF)
 
 EOF
 	[ -d "$pkg/DataTypes/PDF" ] && cat <<'EOF'
-PDF       pdf.datatype: PDF documents
-          Install: see PDF/ReadMe (its Installer script, if it has one)
-          Needs: a 68040 or better; see PDF/ReadMe for the OS and memory.
+PDF       pdf.datatype: PDF documents (and stand-in fonts, 8 MB, for text
+          in fonts a PDF doesn't embed)
+          Install: double-click PDF/Install_pdfdt
+          Needs: picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4 or 3.2),
+          or AROS 68k; a 68040 or 68060 with its FPU; about 8 MB free.
 
 EOF
 	cat <<'EOF'

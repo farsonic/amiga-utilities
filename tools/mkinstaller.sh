@@ -64,27 +64,27 @@ done
 # ---- the labels
 for n in $dts; do
 	case $n in
-	WebP) l="WebP pictures (webp.datatype)"; v="#v43"; need="needs picture.datatype 43" ;;
-	PNG-JPEG) l="PNG and JPEG pictures (png.datatype, jpeg.datatype)"; v="#v43"; need="needs picture.datatype 43" ;;
-	AVIF) l="AVIF pictures (avif.datatype)"; v="#c40"; need="needs a 68040/68060" ;;
-	PDF) l="PDF documents (pdf.datatype)"; v="#c40"; need="needs a 68040/68060" ;;
+	WebP) l="WebP (webp.datatype)"; v="#v43"; need="needs OS 3.5+" ;;
+	PNG-JPEG) l="PNG + JPEG (png/jpeg.datatype)"; v="#v43"; need="needs OS 3.5+" ;;
+	AVIF) l="AVIF (avif.datatype)"; v="#c40"; need="needs a 68040+" ;;
+	PDF) l="PDF (pdf.datatype)"; v="#c40"; need="needs a 68040+" ;;
 	esac
 	echo "(set #l$(echo $n | tr -d -) \"$(q "$l")\")"
 	echo "(if (= $v 0) (set #l$(echo $n | tr -d -) \"$(q "$l") ($need)\"))"
-	[ $n = AVIF ] && echo "(if (= #v43 0) (set #lAVIF \"$(q "$l") (needs picture.datatype 43)\"))"
+	[ $n = AVIF ] && echo "(if (= #v43 0) (set #lAVIF \"$(q "$l") (needs OS 3.5+)\"))"
 done
 echo
 echo "(set #which"
 echo "  (askoptions"
 echo "    (prompt \"What do you want to install?\")"
 printf '    (help (cat "The tools go to a drawer you choose next. Each datatype goes to SYS:Classes/DataTypes, its descriptor to DEVS:DataTypes.\\n\\n"\n'
-printf '%s\n' '               "WebP, PNG, JPEG and AVIF need picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4, 3.2); yours is version " #pdt ".\n\n"'
+printf '%s\n' '               "OS 3.5+ means picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4, 3.2, or P96/CGX on 3.1): WebP, PNG, JPEG and AVIF need it; yours is version " #pdt ".\n\n"'
 printf '%s\n' '               "AVIF and PDF are heavy work: they need a 68040 or 68060 to be usable; this CPU is a " #cpu ".\n\n"'
 echo "               @askoptions-help))"
 printf '    (choices'
 for t in "$@"; do
 	case $t in
-	WBFit) printf ' "WBFit (the Workbench backdrop from any picture)"' ;;
+	WBFit) printf ' "WBFit (backdrop from any picture)"' ;;
 	*) printf ' "%s"' "$(q "$t")" ;;
 	esac
 done

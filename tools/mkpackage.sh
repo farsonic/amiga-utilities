@@ -128,7 +128,9 @@ $icon drawer "$stage/Utilities.info" --image drawer --window 60,40,520,100
 # ---- the safety checks, before the archive is made
 bad=0
 for f in $(cd "$stage" && find Utilities -type f ! -path 'Utilities/Source/*' | LC_ALL=C sort); do
-	if LC_ALL=C grep -q -P '\x00' "$stage/$f" && LC_ALL=C grep -q -a -i -E 'nativecall|ncsupport|nc_call' "$stage/$f"; then
+	# (binary: it has NUL bytes, so removing them makes it shorter)
+	if [ "$(tr -d '\000' < "$stage/$f" | wc -c)" -ne "$(wc -c < "$stage/$f")" ] &&
+	   LC_ALL=C grep -q -a -i -E 'nativecall|ncsupport|nc_call' "$stage/$f"; then
 		echo "mkpackage: $f contains NativeCall code (a private build?), refusing" >&2
 		bad=1
 	fi

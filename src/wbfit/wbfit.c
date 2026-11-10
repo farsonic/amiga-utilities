@@ -230,7 +230,7 @@ static int wput(void *ctx, const void *p, wf_u32 n)
 }
 static int open_tmp(const char *name, char *tmp)
 {
-  sprintf(tmp, "%s.wbfit-tmp", name);
+  sprintf(tmp, "%s.wbfit-%lx", name, (unsigned long)FindTask(NULL) & 0xFFFFFUL);   /* (one a process) */
   memset(&wf, 0, sizeof wf);
   wf.f = Open((STRPTR)tmp, MODE_NEWFILE);
   return wf.f != 0;
@@ -741,7 +741,7 @@ static int fit(const Opt *o, Scr *s, int setprefs)
     for (g = s->rx > s->ry ? s->ry : s->rx; g > 1 && (s->rx % g || s->ry % g); g--) ;
     INFO("  screen %lu bits, mode $%08lx, pixel aspect %lu:%lu%s; read via %s\n", (unsigned long)s->depth, (unsigned long)s->modeid,
          (unsigned long)(s->rx / (g ? g : 1)), (unsigned long)(s->ry / (g ? g : 1)), s->rx == s->ry ? " (square)" : " (corrected)",
-         p.via == 1 ? "picture.datatype 43 pixel array" : "the datatype's bitmap");
+         p.via == 1 ? "its RGB pixel array (PDTM_READPIXELARRAY)" : "its bitmap and colour registers");
     INFO("  wrote %s: %s", path, fmtname[format]);
     if (format == WF_ILBM) INFO(", %d colours (%s%s)", j.ncol, usewb ? "the Workbench palette" : "median cut", o->dither ? ", Floyd-Steinberg" : "");
     INFO(", %lu bytes\n", (unsigned long)j.filebytes);

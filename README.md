@@ -137,10 +137,15 @@ against references written independently in Python: the resampler from exact fra
 median cut and Floyd-Steinberg, the old datatype's colour lookup and HAM; the PNG files decoded
 with Pillow (and their CRCs and zlib stream checked); the ILBM files with a reader of its own; the
 prefs files against the NDK layout (`tests/wbfit/ndkcheck.c` also compiles the NDK's header and
-compares every field offset). On AROS (68040, RTG) under FS-UAE: pictures read through datatypes
-both ways, every mode and format written at the screen's exact size, our ILBMs read back by
-AROS's ilbm.datatype, the prefs written and kept, RESTORE, and the errors.
+compares every field offset). On AROS (m68k, 68040, a 640x480 RTG screen) under FS-UAE:
+pictures read through datatypes both ways (the RGB pixel array, and the bitmap with colour
+registers for ILBM and GIF), every mode and format written at exactly the screen's size, the two
+alternating names, our palette and 24-bit ILBMs read back by AROS's ilbm.datatype to the same
+pixels, the prefs written with the drawer and screen entries kept, RESTORE giving back the
+original file byte for byte, WATCH (idle through a prefs change, stopped by a second start), the
+error messages, and the NativeCall build falling back to the 68k code with the same bytes.
 
 Not verified here, needs a real Workbench 3.1/3.2: that IPrefs and Workbench pick up the backdrop
-at once (AROS's Wanderer does not use WBPattern.prefs), the look of the remapped picture on
-AGA/ECS screens, and WATCH across a real ScreenMode change.
+at once (no IPrefs or Workbench ran in these tests; AROS's Wanderer has prefs of its own), the
+look of the remapped picture on AGA/ECS screens, WATCH across a real ScreenMode change, and
+picture.datatype 40's own behaviour (the V40 path was run on AROS's class with `V40`).

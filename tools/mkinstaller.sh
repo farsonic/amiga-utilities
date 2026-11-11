@@ -21,7 +21,7 @@ q() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }   # an Installer string
 
 ntools=$#
 dts=""
-for n in WebP PNG-JPEG AVIF PDF; do [ -d "$pkg/DataTypes/$n" ] && dts="$dts $n"; done
+for n in WebP PNG-JPEG AVIF PDF Markdown; do [ -d "$pkg/DataTypes/$n" ] && dts="$dts $n"; done
 
 {
 cat <<'EOF'
@@ -60,6 +60,7 @@ for t in "$@"; do echo "(set #def (+ #def $val))   ; $t"; bit=$((bit + 1)); val=
 for n in $dts; do
 	case $n in
 	AVIF|PDF) echo "(if #v43 (if #c40 (set #def (+ #def $val))))   ; $n" ;;
+	Markdown) echo "(set #def (+ #def $val))   ; $n (OS 3.0+, any CPU)" ;;
 	*) echo "(if #v43 (set #def (+ #def $val)))   ; $n" ;;
 	esac
 	val=$((val * 2))
@@ -71,9 +72,10 @@ for n in $dts; do
 	PNG-JPEG) l="PNG + JPEG (png/jpeg.datatype)"; v="#v43"; need="needs OS 3.5+" ;;
 	AVIF) l="AVIF (avif.datatype)"; v="#c40"; need="needs a 68040+" ;;
 	PDF) l="PDF (pdf.datatype)"; v="#c40"; need="needs a 68040+ with FPU" ;;
+	Markdown) l="Markdown (markdown.datatype)"; v=""; need="" ;;
 	esac
 	echo "(set #l$(echo $n | tr -d -) \"$(q "$l")\")"
-	echo "(if (= $v 0) (set #l$(echo $n | tr -d -) \"$(q "$l") ($need)\"))"
+	[ -n "$v" ] && echo "(if (= $v 0) (set #l$(echo $n | tr -d -) \"$(q "$l") ($need)\"))"
 	case $n in AVIF|PDF) echo "(if (= #v43 0) (set #l$n \"$(q "$l") (needs OS 3.5+)\"))" ;; esac
 done
 echo
@@ -81,7 +83,7 @@ echo "(set #which"
 echo "  (askoptions"
 echo "    (prompt \"What do you want to install?\")"
 printf '    (help (cat "The tools go to a drawer you choose next. Each datatype goes to SYS:Classes/DataTypes, its descriptor to DEVS:DataTypes.\\n\\n"\n'
-printf '%s\n' '               "OS 3.5+ means picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4, 3.2, or P96/CGX on 3.1): every datatype here needs it; yours is version " #pdt ".\n\n"'
+printf '%s\n' '               "OS 3.5+ means picture.datatype 43 or newer (OS 3.5, 3.9, 3.1.4, 3.2, or P96/CGX on 3.1): every picture datatype here needs it (Markdown, a text datatype, does not); yours is version " #pdt ".\n\n"'
 printf '%s\n' '               "AVIF and PDF are heavy work: they need a 68040 or 68060 (PDF one with its FPU); this CPU is a " #cpu ".\n\n"'
 echo "               @askoptions-help))"
 printf '    (choices'

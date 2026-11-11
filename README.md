@@ -9,7 +9,7 @@ an Installer script (`Install-Utilities`) that installs whichever of them you ch
 |---|---|---|
 | WBFit | sets the Workbench backdrop from any picture, scaled to the screen's exact resolution (and pixel aspect) | OS 3.0/3.1+, any 68000; PNG/24-bit backdrops need picture.datatype 43 |
 | FitView | a MultiView replacement whose pictures always fit the window, re-fitted live as it is resized; PDFs a page at a time, drawn sharp for the window | OS 3.1+, any 68000; true colour needs picture.datatype 43; RTG or AGA/ECS |
-| DataTypes/ | our datatypes, each its own unchanged public package: WebP, PNG + JPEG, AVIF, PDF (each one included when its package has been built) | picture.datatype 43 (OS 3.5+); AVIF and PDF a 68040/060 (PDF with FPU) |
+| DataTypes/ | our datatypes, each its own unchanged public package: WebP, PNG + JPEG, AVIF, PDF, Markdown (each one included when its package has been built) | the picture ones picture.datatype 43 (OS 3.5+), AVIF and PDF a 68040/060 (PDF with FPU); Markdown (a text datatype) OS 3.0+, any 68000 |
 
 Private NativeCall builds of tools that have one (WBFit, FitView) are never part of this archive (the NativeCall
 SDK has no licence yet); they are built separately with `NATIVECALL=1 NC_SDK=...`. The packaging

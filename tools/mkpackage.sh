@@ -71,12 +71,13 @@ dtpkg() {   # drawer name, archive
 dtpkg WebP "$far/webpdt/build/webpdt-1.0.lha"
 dtpkg PNG-JPEG "$far/pjdt/build/pjdt-1.0.lha"
 dtpkg AVIF "$far/avifdt/build/avifdt-1.0.lha"
+dtpkg Markdown "$far/mddt/build/mddt-1.0.lha"
 pdf=$(ls "$far"/pdfdt/build/pdfdt-*.lha 2>/dev/null | LC_ALL=C sort | tail -1 || true)
 dtpkg PDF "${pdf:-$far/pdfdt/build/pdfdt-(not built).lha}"
 {
 	cat <<'EOF'
-DataTypes - our picture and document datatypes
-==============================================
+DataTypes - our picture, document and text datatypes
+====================================================
 
 Each drawer is that datatype's own package, unchanged: double-click its
 Installer script (the standard Amiga Installer) or follow its ReadMe. They are
@@ -114,9 +115,18 @@ PDF       pdf.datatype: PDF documents (and stand-in fonts, 8 MB, for text
           or AROS 68k; a 68040 or 68060 with its FPU; about 8 MB free.
 
 EOF
+	[ -d "$pkg/DataTypes/Markdown" ] && cat <<'EOF'
+Markdown  markdown.datatype: Markdown files (.md) formatted, as text:
+          headings, emphasis, lists, code, quotes, tables, links (click
+          to open them), wrapped to the window
+          Install: double-click Markdown/Install_mddt
+          Needs: OS 3.0 or newer (text.datatype 39+), any 68000.
+
+EOF
 	cat <<'EOF'
 OS 3.0 and 3.1's own picture.datatype (version 40) takes only palette
-pictures, so these datatypes need a newer one. WBFit itself does not: it
+pictures, so the picture datatypes need a newer one (markdown.datatype is a
+text datatype and works on OS 3.0 and 3.1). WBFit itself does not: it
 works on OS 3.1 with any datatype the system has (ILBM is always there).
 EOF
 } > "$pkg/DataTypes/ReadMe"

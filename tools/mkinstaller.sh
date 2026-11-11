@@ -220,4 +220,5 @@ EOF
 } > "$out"
 # with no tools #anytool must still exist
 [ $ntools -gt 0 ] || sed -i 's/^(if #anytool (set @default-dest #dest))$//' "$out"
+python3 "$(dirname "$0")/srcfix.py" "$out" >/dev/null
 echo "mkinstaller: $out"

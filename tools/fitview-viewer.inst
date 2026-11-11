@@ -1,4 +1,8 @@
 ; ---- FitView as the viewer (tools/fitview-viewer.inst, @BIT@: FitView's bit in #which)
+; the drawer this script is in: Workbench may start Installer with another current
+; directory, so sources are found through the icon's path (#src)
+(if (= @icon "") (set #src "") (set #src (pathonly @icon)))
+
 (set #fvsys 0)
 (set #fvmv 0)
 (if (IN #which @BIT@)
@@ -12,7 +16,7 @@
                  "offers to put it in place of MultiView itself.\n\n" @askbool-help))
       (default 0))))
 (if #fvsys
-  (copyfiles (prompt "Copying FitView to SYS:Utilities") (help @copyfiles-help) (source "FitView") (dest "SYS:Utilities") (infos)))
+  (copyfiles (prompt "Copying FitView to SYS:Utilities") (help @copyfiles-help) (source (tackon #src "FitView")) (dest "SYS:Utilities") (infos)))
 (if #fvsys
   (set #fvmv
     (askbool
@@ -31,4 +35,4 @@
         (source "SYS:Utilities/MultiView") (dest "SYS:Utilities") (newname "MultiView.orig")))))
 (if #fvmv
   (copyfiles (prompt "Putting FitView in place of SYS:Utilities/MultiView") (help @copyfiles-help)
-    (source "FitView") (dest "SYS:Utilities") (newname "MultiView")))
+    (source (tackon #src "FitView")) (dest "SYS:Utilities") (newname "MultiView")))

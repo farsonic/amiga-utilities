@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in WBFit, FitView, the installer or a bundled datatype doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what it did instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Choose ...
+        3. ...
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Which part
+      options: [WBFit, FitView, Install-Utilities, a bundled datatype, other]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The tool's version (Version WBFit, Version FitView) or the archive's date.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: AmigaOS version, MUI version (or Zune/AROS), CPU and accelerator, screen mode (RTG or AGA).
+      placeholder: AmigaOS 3.2, MUI 3.8, 68040 (PiStorm), RTG 1280x720
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: File or screenshot
+      description: Attach the picture or file that shows the problem if you can (only if it is not private), or a screenshot. A crash's Guru Meditation number helps too.

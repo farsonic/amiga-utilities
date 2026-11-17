@@ -1,5 +1,7 @@
 # Utilities
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-farsonic-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/farsonic)
+
 Small utilities for AmigaOS 3.x, collected in one archive (`build/Utilities.lha`), like the
 Commodities archive. Each tool has its own drawer in `src/`, its own section below, and is built by
 `make`; `make package` builds the archive with icons, this ReadMe, the source, our datatypes and

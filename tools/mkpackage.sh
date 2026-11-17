@@ -39,6 +39,7 @@ for t in "$@"; do
 	x=$((x + 80))
 done
 cp "$top/README.md" "$pkg/ReadMe"
+cp "$top/LICENSE" "$pkg/LICENSE"
 $icon project "$pkg/ReadMe.info" --image doc --tool SYS:Utilities/MultiView --pos $x,10
 x=$((x + 80))
 

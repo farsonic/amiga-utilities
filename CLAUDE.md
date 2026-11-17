@@ -21,7 +21,7 @@ are missing.
 
 ## Build and test
 
-Host tests (need gcc and Python 3 with Pillow; CI runs them and they must stay green):
+Host tests (need gcc and Python 3 with Pillow and numpy; CI runs them and they must stay green):
 
     make test
 

@@ -10,6 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Python packages for the reference checks
-        run: pip install pillow
+        run: pip install pillow numpy
       - name: Host tests
         run: make test
